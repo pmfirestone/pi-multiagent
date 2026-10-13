@@ -211,6 +211,39 @@ test("getPiInvocation falls back to PATH when current execPath disappeared", asy
 	}
 });
 
+test("getPiInvocation treats version-suffixed node executables as interpreters", async () => {
+	const root = await mkdtemp(join(tmpdir(), "pi-multiagent-launch-versioned-node-"));
+	const workspace = join(root, "workspace");
+	const runtimeBin = join(root, "runtime");
+	const trustedBin = join(root, "trusted");
+	await mkdir(workspace, { recursive: true });
+	await mkdir(runtimeBin);
+	await mkdir(trustedBin);
+	const launcherName = process.platform === "win32" ? "pi.cmd" : "pi";
+	const trustedLauncher = join(trustedBin, launcherName);
+	const versionedNode = join(runtimeBin, process.platform === "win32" ? "node-22.exe" : "node-22");
+	await writeFile(trustedLauncher, "#!/bin/sh\nexit 0\n", "utf8");
+	await writeFile(versionedNode, "#!/bin/sh\nexec node \"$@\"\n", "utf8");
+	await chmod(trustedLauncher, 0o755);
+	await chmod(versionedNode, 0o755);
+	const originalPath = process.env.PATH;
+	const originalScript = process.argv[1];
+	const originalExecPath = Object.getOwnPropertyDescriptor(process, "execPath");
+	try {
+		process.env.PATH = trustedBin;
+		process.argv[1] = "";
+		Object.defineProperty(process, "execPath", { value: versionedNode, configurable: true, enumerable: true, writable: true });
+		const invocation = getPiInvocation(["--mode", "json"], workspace);
+		assert.equal(invocation.command, trustedLauncher);
+	} finally {
+		if (originalPath === undefined) delete process.env.PATH;
+		else process.env.PATH = originalPath;
+		process.argv[1] = originalScript;
+		if (originalExecPath) Object.defineProperty(process, "execPath", originalExecPath);
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
 function resolvedAgent(): ResolvedAgent {
 	return { id: "one", ref: "package:critic", name: "critic", kind: "library", description: "Critic", tools: ["read", "grep", "find", "ls"], extensionTools: [], callerSkills: [], systemPrompt: "Review.", model: undefined, thinking: undefined, source: "package", filePath: "/tmp/critic.md", sha256: "abc" };
 }

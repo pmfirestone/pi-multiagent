@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recognized version-suffixed Node/Bun interpreter executables (for example `node-22`, `nodejs`, `bun.exe`) as interpreters in child launcher resolution, so they are no longer mistaken for a self-contained `pi` binary and are not used as a bare child command.
+
 ## 0.9.8 - 2026-07-04
 
 - Made child Pi sessions mandatory and observable: child launches now use normal persistent Pi sessions with deterministic names/session-dir propagation, `run_status`/`step_result`/artifacts report child session metadata, progress watchdog diagnostics preserve stalled-child evidence, failed steps retain safe partial evidence, read-only idempotent transport failures retry once only when no child/output/message evidence exists, and parent-message queue observations distinguish accepted, queued, consumed, and no-next-turn states.
