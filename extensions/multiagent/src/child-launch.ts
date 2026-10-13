@@ -9,6 +9,9 @@ import { effectiveAgentInvocation } from "./agent-invocation.ts";
 import { childToolNames } from "./tool-policy.ts";
 import { findNearestWorkspaceRoot, isContainedPath, safeRealpath } from "./project-root.ts";
 
+/** Matches a Node/Bun interpreter executable, including version- or distro-suffixed names such as `node-22`, `node.20`, `nodejs` and `bun.exe`. */
+const INTERPRETER_EXECUTABLE_NAME = /^(?:node(?:js)?|bun)(?:[-.]?\d+(?:\.\d+)*)?(?:\.exe)?$/;
+
 export interface SpawnOptions {
 	cwd: string;
 	shell: false;
@@ -88,7 +91,7 @@ export function getPiInvocation(args: string[], cwd: string): { command: string;
 	const currentScriptPath = currentScript && !isBunVirtualScript ? resolve(currentScript) : undefined;
 	if (currentScriptPath && existsSync(currentScriptPath) && isExecutableFile(process.execPath) && isTrustedLaunchPath(deniedRoots, process.execPath) && isTrustedLaunchPath(deniedRoots, currentScriptPath)) return { command: process.execPath, args: [currentScriptPath, ...args] };
 	const execName = basename(process.execPath).toLowerCase();
-	if (!/^(?:node(?:js)?|bun)(?:[-.]?\d+(?:\.\d+)*)?(?:\.exe)?$/.test(execName) && isExecutableFile(process.execPath) && isTrustedLaunchPath(deniedRoots, process.execPath)) return { command: process.execPath, args };
+	if (!INTERPRETER_EXECUTABLE_NAME.test(execName) && isExecutableFile(process.execPath) && isTrustedLaunchPath(deniedRoots, process.execPath)) return { command: process.execPath, args };
 	const command = resolvePiCommandFromPath(process.env.PATH ?? "", cwd);
 	if (!command) throw new Error("Unable to resolve a trusted absolute pi launcher from PATH; refusing to spawn bare pi.");
 	return { command, args };
